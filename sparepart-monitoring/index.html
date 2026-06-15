@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Web Stock Monitoring Sparepart – pantau stok, planning, dan katalog sparepart secara real-time dari spreadsheet." />
+  <title>SparePart Monitor | Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <i class="fa-solid fa-gear fa-spin-pulse"></i>
+        <span class="logo-text">SparePart<span class="logo-accent">Monitoring</span></span>
+      </div>
+      <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <p class="nav-label">MENU UTAMA</p>
+      <a href="#" class="nav-item active" data-page="stock" id="nav-stock">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Stock</span>
+        <span class="nav-badge" id="badge-stock">24</span>
+      </a>
+
+      <!-- Sidebar quick-add Stock — visible only when Stock page active -->
+      <div class="sidebar-sub-actions" id="sidebarStockActions">
+        <button class="sidebar-add-btn" id="sidebarAddStockBtn" aria-label="Tambah item stock baru">
+          <i class="fa-solid fa-plus"></i>
+          <span>Tambah Stok</span>
+        </button>
+      </div>
+
+      <a href="#" class="nav-item" data-page="planning" id="nav-planning">
+        <i class="fa-solid fa-table-cells-large"></i>
+        <span>Planning</span>
+        <span class="nav-badge" id="badge-planning" style="background:var(--primary)">0</span>
+      </a>
+
+      <!-- Sidebar Planning actions — visible only when Planning page active -->
+      <div class="sidebar-sub-actions" id="sidebarPlanningActions">
+        <div class="sidebar-scan-info" id="sidebarScanInfo">
+          <i class="fa-solid fa-circle-dot" style="color:var(--primary-light);font-size:.65rem"></i>
+          <span id="sidebarScanPending">0 pending</span>
+        </div>
+        <button class="sidebar-add-btn sidebar-scan-btn" id="sidebarScanAllBtn" aria-label="Scan semua item planning">
+          <i class="fa-solid fa-barcode"></i>
+          <span>Scan Part</span>
+        </button>
+      </div>
+      <a href="#" class="nav-item" data-page="catalog" id="nav-catalog">
+        <i class="fa-solid fa-book-open"></i>
+        <span>Catalog</span>
+      </a>
+
+
+    </nav>
+
+    <!-- ===== SIDEBAR STOCK PANEL ===== -->
+    <div class="sidebar-stock-panel" id="sidebarStockPanel">
+      <button class="sidebar-stock-toggle" id="sidebarStockToggle" aria-label="Toggle stock panel">
+        <div class="sidebar-stock-toggle-left">
+          <i class="fa-solid fa-warehouse"></i>
+          <span>Live Stock</span>
+        </div>
+        <div class="sidebar-stock-toggle-right">
+          <span class="sidebar-stock-count" id="sidebarStockCount">0</span>
+          <i class="fa-solid fa-chevron-up sidebar-stock-chevron" id="sidebarStockChevron"></i>
+        </div>
+      </button>
+
+      <div class="sidebar-stock-body" id="sidebarStockBody">
+        <!-- Sync status -->
+        <div class="sidebar-stock-sync" id="sidebarStockSync">
+          <i class="fa-solid fa-rotate fa-spin"></i>
+          <span>Menghubungkan…</span>
+        </div>
+
+        <!-- Search -->
+        <div class="sidebar-stock-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="sidebarStockSearch" placeholder="Cari part…" aria-label="Cari part di sidebar" />
+        </div>
+
+        <!-- Filter chips -->
+        <div class="sidebar-stock-filters">
+          <button class="sb-filter-chip active" data-sbfilter="all">Semua</button>
+          <button class="sb-filter-chip" data-sbfilter="open">Open</button>
+          <button class="sb-filter-chip" data-sbfilter="close">Close</button>
+        </div>
+
+        <!-- Stock list -->
+        <div class="sidebar-stock-list" id="sidebarStockList">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Summary footer -->
+        <div class="sidebar-stock-footer">
+          <div class="sb-footer-stat">
+            <span class="sb-footer-label">Total Part</span>
+            <span class="sb-footer-value" id="sbFooterTotal">0</span>
+          </div>
+          <div class="sb-footer-stat">
+            <span class="sb-footer-label">Total Qty</span>
+            <span class="sb-footer-value" id="sbFooterQty">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ===== OVERLAY ===== -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="layout">
+
+    <!-- TOP NAVBAR -->
+    <header class="topbar">
+      <button class="hamburger" id="hamburger" aria-label="Open sidebar">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="topbar-title" id="page-title">Stock Overview</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="themeToggle" title="Toggle tema" aria-label="Toggle dark/light mode">
+          <i class="fa-solid fa-moon" id="theme-icon"></i>
+        </button>
+        <button class="icon-btn" title="Notifikasi" aria-label="Notifikasi">
+          <i class="fa-solid fa-bell"></i>
+          <span class="notif-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content">
+
+      <!-- ============================
+           PAGE: STOCK
+      ============================= -->
+      <section class="page active" id="page-stock">
+
+        <!-- Summary Cards -->
+        <div class="cards-grid">
+          <div class="card card--blue" id="card-total-items">
+            <div class="card-icon"><i class="fa-solid fa-cubes"></i></div>
+            <div class="card-body">
+              <p class="card-label">Total Items</p>
+              <h2 class="card-value" id="val-total-items">0</h2>
+              <p class="card-sub">Part terdaftar</p>
+            </div>
+            <div class="card-sparkline">
+              <svg viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="0,25 15,20 30,22 45,10 60,14 80,5" fill="none" stroke="rgba(255,255,255,.5)"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="card card--purple" id="card-total-qty">
+            <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <div class="card-body">
+              <p class="card-label">Total Quantity</p>
+              <h2 class="card-value" id="val-total-qty">0</h2>
+              <p class="card-sub">Unit tersedia</p>
+            </div>
+            <div class="card-sparkline">
+              <svg viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="0,28 20,18 35,22 50,8 65,12 80,4" fill="none" stroke="rgba(255,255,255,.5)"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="card card--teal" id="card-customers">
+            <div class="card-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="card-body">
+              <p class="card-label">Customers</p>
+              <h2 class="card-value" id="val-customers">0</h2>
+              <p class="card-sub">Pelanggan aktif</p>
+            </div>
+            <div class="card-sparkline">
+              <svg viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="0,20 15,25 30,15 45,18 60,8 80,10" fill="none" stroke="rgba(255,255,255,.5)"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="card card--orange" id="card-low-stock">
+            <div class="card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="card-body">
+              <p class="card-label">Low Stock</p>
+              <h2 class="card-value" id="val-low-stock">0</h2>
+              <p class="card-sub">Perlu restock</p>
+            </div>
+            <div class="card-sparkline">
+              <svg viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="0,5 20,8 35,4 50,15 65,12 80,20" fill="none" stroke="rgba(255,255,255,.5)"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="section-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Daftar Stok Sparepart</h2>
+              <p class="section-sub">Data real-time dari Google Sheets</p>
+              <div class="planning-sync-row" style="margin-top:8px">
+                <span id="stockSyncBadge" class="sync-badge sync-loading">
+                  <i class="fa-solid fa-rotate fa-spin"></i> Menghubungkan ke Sheets…
+                </span>
+                <a href="https://docs.google.com/spreadsheets/d/1XcutKioxyaY7lJzKOTNKk-TnLmgcMOJGYsng-MhUiZY/edit?gid=1277047503" target="_blank" class="sheets-link" aria-label="Buka Sheet Stock">
+                  <i class="fa-brands fa-google"></i> Sheet Stock
+                </a>
+              </div>
+            </div>
+            <div class="section-actions">
+              <div class="search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Cari part no, job no, customer…"
+                  aria-label="Cari data stok" />
+              </div>
+              <button class="btn-outline" id="stockWriteConfigBtn" title="Atur URL Apps Script untuk write ke Sheets" aria-label="Konfigurasi Apps Script URL">
+                <i class="fa-solid fa-gear"></i>
+              </button>
+              <button class="btn-export" id="exportToSheetsBtn" aria-label="Export data ke Google Sheets">
+                <i class="fa-solid fa-file-export"></i>
+                <span class="btn-text">Export ke Sheets</span>
+              </button>
+              <button class="btn-primary" id="refreshBtn" aria-label="Refresh data">
+                <i class="fa-solid fa-rotate"></i>
+                <span class="btn-text">Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter pills -->
+          <div class="filter-pills">
+            <button class="pill active" data-filter="all">Semua</button>
+            <button class="pill" data-filter="available">Tersedia</button>
+            <button class="pill" data-filter="low">Low Stock</button>
+            <button class="pill" data-filter="out">Habis</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="stockTable">
+              <thead>
+                <tr>
+                  <th class="col-no">No</th>
+                  <th class="col-img">Gambar</th>
+                  <th class="col-partno sortable" data-col="partNo">Part No <i class="fa-solid fa-sort"></i></th>
+                  <th class="col-jobno sortable" data-col="jobNo">Job No <i class="fa-solid fa-sort"></i></th>
+                  <th class="col-address">Alamat Part</th>
+                  <th class="col-customer sortable" data-col="customer">Customer <i class="fa-solid fa-sort"></i></th>
+                  <th class="col-qty sortable" data-col="quantity">Quantity <i class="fa-solid fa-sort"></i></th>
+                  <th class="col-status">Status</th>
+                  <th class="col-action">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="stockTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="table-footer">
+            <p class="table-info" id="tableInfo">Menampilkan 0 dari 0 data</p>
+            <div class="pagination" id="pagination"></div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================
+           PAGE: PLANNING
+       ============================= -->
+      <section class="page" id="page-planning">
+
+        <!-- Planning Header -->
+        <div class="planning-header">
+          <div>
+            <h1 class="planning-title"><i class="fa-solid fa-truck-fast"></i> Planning Pengiriman Part</h1>
+            <p class="planning-sub">Jadwal persiapan &amp; pengiriman sparepart — <span id="planDateLabel"></span></p>
+            <div class="planning-sync-row">
+              <span id="syncStatusBadge" class="sync-badge sync-loading">
+                <i class="fa-solid fa-rotate fa-spin"></i> Menghubungkan ke Sheets…
+              </span>
+              <a href="https://docs.google.com/spreadsheets/d/1XcutKioxyaY7lJzKOTNKk-TnLmgcMOJGYsng-MhUiZY/edit?gid=1993337943"
+                target="_blank" class="sheets-link" aria-label="Buka Google Sheets">
+                <i class="fa-brands fa-google"></i> Buka Spreadsheet
+              </a>
+            </div>
+          </div>
+          <div class="planning-header-actions">
+            <button class="btn-icon-outline" id="planRefreshBtn" title="Refresh dari Google Sheets"
+              aria-label="Refresh dari Sheets">
+              <i class="fa-solid fa-rotate" id="planRefreshIcon"></i>
+            </button>
+            <button class="btn-outline" id="planAddBtn" aria-label="Tambah jadwal">
+              <i class="fa-solid fa-plus"></i> Tambah
+            </button>
+            <button class="btn-primary" id="planScanAllBtn" aria-label="Scan semua part">
+              <i class="fa-solid fa-barcode"></i> Scan Part
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Summary Bar -->
+        <div class="plan-summary-row">
+          <div class="plan-summary-card">
+            <i class="fa-solid fa-list-check"></i>
+            <div>
+              <p class="psv" id="psTotalPlan">0</p>
+              <p class="psl">Total Planning</p>
+            </div>
+          </div>
+          <div class="plan-summary-card">
+            <i class="fa-solid fa-circle-check" style="color:#22c55e"></i>
+            <div>
+              <p class="psv" id="psScanned">0</p>
+              <p class="psl">Sudah Discan</p>
+            </div>
+          </div>
+          <div class="plan-summary-card">
+            <i class="fa-solid fa-circle-xmark" style="color:#f97316"></i>
+            <div>
+              <p class="psv" id="psPending">0</p>
+              <p class="psl">Belum Discan</p>
+            </div>
+          </div>
+          <div class="plan-summary-card plan-progress-card">
+            <div class="plan-progress-label">
+              <span>Progress</span>
+              <span id="psPercent">0%</span>
+            </div>
+            <div class="plan-progress-track">
+              <div class="plan-progress-fill" id="planProgressFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="plan-filter-row">
+          <button class="plan-tab active" data-planfilter="all">Semua</button>
+          <button class="plan-tab" data-planfilter="pending">Belum Discan</button>
+          <button class="plan-tab" data-planfilter="scanned">Sudah Discan</button>
+          <div class="plan-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="planSearchInput" class="plan-search-input" placeholder="Cari part no, customer…" />
+          </div>
+        </div>
+
+        <!-- Planning Schedule Table -->
+        <div class="plan-table-wrap">
+          <table class="plan-table" id="planTable">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>No PO</th>
+                <th>Tanggal Kirim</th>
+                <th>Part No</th>
+                <th>Nama Part</th>
+                <th>Customer</th>
+                <th>Qty</th>
+                <th>Status Sheet</th>
+                <th>Status Scan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="planTableBody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <!-- ============================
+           PAGE: CATALOG
+      ============================= -->
+      <section class="page" id="page-catalog">
+        <div class="catalog-header">
+          <div>
+            <h1 class="catalog-title">Katalog Sparepart</h1>
+            <p class="catalog-sub">Temukan part yang Anda butuhkan</p>
+          </div>
+          <div class="catalog-actions">
+            <div class="search-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="catalogSearch" class="search-input" placeholder="Cari katalog part…"
+                aria-label="Cari katalog" />
+            </div>
+            <div class="catalog-view-toggle">
+              <button class="view-btn active" id="gridViewBtn" aria-label="Grid view"><i
+                  class="fa-solid fa-grip"></i></button>
+              <button class="view-btn" id="listViewBtn" aria-label="List view"><i class="fa-solid fa-list"></i></button>
+            </div>
+            <button class="btn-primary" id="addItemBtn" aria-label="Tambah barang baru">
+              <i class="fa-solid fa-plus"></i> Tambah Barang
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="category-tabs">
+          <button class="cat-tab active" data-cat="all">Semua</button>
+          <button class="cat-tab" data-cat="mechanical">Mechanical</button>
+          <button class="cat-tab" data-cat="electrical">Electrical</button>
+          <button class="cat-tab" data-cat="pneumatic">Pneumatic</button>
+          <button class="cat-tab" data-cat="hydraulic">Hydraulic</button>
+        </div>
+
+        <!-- Catalog Grid -->
+        <div class="catalog-grid" id="catalogGrid">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== MODAL: Part Detail ===== -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <button class="modal-close" id="modalClose" aria-label="Tutup modal"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body" id="modalBody">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: Form Catalog ===== -->
+  <div class="modal-overlay" id="catalogFormOverlay" role="dialog" aria-modal="true"
+    aria-labelledby="catalog-form-title">
+    <div class="modal" style="max-width:500px">
+      <button class="modal-close" id="catalogFormClose" aria-label="Tutup form"><i
+          class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body">
+        <h2 class="modal-title" id="catalog-form-title">Tambah Barang</h2>
+        <p class="modal-partno" id="catalogFormSubtitle" style="margin-bottom:20px">Isi detail barang baru</p>
+        <form id="catalogForm" novalidate>
+          <input type="hidden" id="formItemId" value="" />
+          <div class="form-group">
+            <label class="form-label" for="formName">Nama Part <span class="req">*</span></label>
+            <input type="text" id="formName" class="form-input" placeholder="contoh: Bearing SKF 6205" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="formPartNo">Part No <span class="req">*</span></label>
+              <input type="text" id="formPartNo" class="form-input" placeholder="BRG-SKF-6205" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formCategory">Kategori <span class="req">*</span></label>
+              <select id="formCategory" class="form-input">
+                <option value="mechanical">Mechanical</option>
+                <option value="electrical">Electrical</option>
+                <option value="pneumatic">Pneumatic</option>
+                <option value="hydraulic">Hydraulic</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formStock">Stok (unit) <span class="req">*</span></label>
+            <input type="number" id="formStock" class="form-input" placeholder="0" min="0" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formDesc">Deskripsi</label>
+            <textarea id="formDesc" class="form-input form-textarea" placeholder="Keterangan singkat tentang part ini…"
+              rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formImg">Foto Barang</label>
+            <div class="file-picker-wrap">
+              <div class="file-preview" id="filePreview">
+                <i class="fa-solid fa-image"></i>
+                <span>Belum ada foto dipilih</span>
+              </div>
+              <label class="file-picker-btn" for="formImg">
+                <i class="fa-solid fa-folder-open"></i> Pilih Foto
+              </label>
+              <input type="file" id="formImg" accept="image/*" class="file-input-hidden"
+                aria-label="Pilih foto barang" />
+              <input type="hidden" id="formImgData" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-outline" id="catalogFormCancel">Batal</button>
+            <button type="submit" class="btn-primary" id="catalogFormSubmit">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: Add/Edit Planning ===== -->
+  <div class="modal-overlay" id="planFormOverlay" role="dialog" aria-modal="true" aria-labelledby="plan-form-title">
+    <div class="modal" style="max-width:480px">
+      <button class="modal-close" id="planFormClose" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body">
+        <h2 class="modal-title" id="plan-form-title">Tambah Planning</h2>
+        <p class="modal-partno" id="planFormSubtitle" style="margin-bottom:20px">Isi detail jadwal pengiriman part</p>
+        <form id="planForm" novalidate>
+          <input type="hidden" id="planFormId" value="" />
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="planFormDate">Tanggal Kirim <span class="req">*</span></label>
+              <input type="date" id="planFormDate" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="planFormQty">Qty <span class="req">*</span></label>
+              <input type="number" id="planFormQty" class="form-input" placeholder="0" min="1" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="planFormPartNo">Part No <span class="req">*</span></label>
+            <input type="text" id="planFormPartNo" class="form-input" placeholder="SP-0012-A" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="planFormPartName">Nama Part <span class="req">*</span></label>
+            <input type="text" id="planFormPartName" class="form-input" placeholder="Bearing SKF 6205" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="planFormCustomer">Customer <span class="req">*</span></label>
+            <input type="text" id="planFormCustomer" class="form-input" placeholder="PT. Astra Honda" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="planFormNote">Catatan</label>
+            <textarea id="planFormNote" class="form-input form-textarea" placeholder="Keterangan tambahan…"
+              rows="2"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-outline" id="planFormCancel">Batal</button>
+            <button type="submit" class="btn-primary" id="planFormSubmit">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: Scan Part ===== -->
+  <div class="modal-overlay" id="scanOverlay" role="dialog" aria-modal="true" aria-labelledby="scan-modal-title">
+    <div class="modal scan-modal" style="max-width:420px">
+      <button class="modal-close" id="scanModalClose" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body" style="text-align:center">
+        <div class="scan-icon-wrap" id="scanIconWrap">
+          <i class="fa-solid fa-barcode scan-icon"></i>
+        </div>
+        <h2 class="modal-title" id="scan-modal-title" style="margin-top:16px">Scan Part</h2>
+        <p id="scanPartInfo" class="modal-partno" style="margin-bottom:20px">Arahkan scanner ke barcode part</p>
+        <div class="scan-input-wrap">
+          <input type="text" id="scanInput" class="scan-input-field" placeholder="Scan atau ketik Part No…"
+            autocomplete="off" />
+          <button class="btn-primary" id="scanConfirmBtn" style="width:100%;margin-top:12px">
+            <i class="fa-solid fa-check"></i> Konfirmasi Scan
+          </button>
+        </div>
+        <div class="scan-result" id="scanResult" style="display:none"></div>
+        <button class="btn-outline" id="scanSkipBtn" style="width:100%;margin-top:10px">
+          <i class="fa-solid fa-forward"></i> Lewati
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: Add/Edit Stock ===== -->
+  <div class="modal-overlay" id="stockFormOverlay" role="dialog" aria-modal="true" aria-labelledby="stock-form-title">
+    <div class="modal" style="max-width:520px">
+      <button class="modal-close" id="stockFormClose" aria-label="Tutup form"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body">
+        <div class="stock-form-header">
+          <div class="stock-form-icon" id="stockFormIcon">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+          <div>
+            <h2 class="modal-title" id="stock-form-title">Tambah Item Stock</h2>
+            <p class="modal-partno" id="stockFormSubtitle">Isi detail item stok baru</p>
+          </div>
+        </div>
+        <form id="stockForm" novalidate>
+          <input type="hidden" id="stockFormId" value="" />
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="stockFormPartNo">Part No <span class="req">*</span></label>
+              <input type="text" id="stockFormPartNo" class="form-input" placeholder="SP-0012-A" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stockFormJobNo">Job No <span class="req">*</span></label>
+              <input type="text" id="stockFormJobNo" class="form-input" placeholder="JB-2024-001" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="stockFormAddress">Alamat Part <span class="req">*</span></label>
+              <input type="text" id="stockFormAddress" class="form-input" placeholder="Rak A1-01" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stockFormCategory">Kategori <span class="req">*</span></label>
+              <select id="stockFormCategory" class="form-input">
+                <option value="mechanical">Mechanical</option>
+                <option value="electrical">Electrical</option>
+                <option value="pneumatic">Pneumatic</option>
+                <option value="hydraulic">Hydraulic</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="stockFormCustomer">Customer <span class="req">*</span></label>
+            <input type="text" id="stockFormCustomer" class="form-input" placeholder="PT. Astra Honda" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="stockFormQty">Quantity <span class="req">*</span></label>
+            <div class="qty-input-wrap">
+              <button type="button" class="qty-btn" id="qtyMinus" aria-label="Kurangi"><i
+                  class="fa-solid fa-minus"></i></button>
+              <input type="number" id="stockFormQty" class="form-input qty-input" placeholder="0" min="0" required />
+              <button type="button" class="qty-btn" id="qtyPlus" aria-label="Tambah"><i
+                  class="fa-solid fa-plus"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="stockFormImg">Foto Part (URL)</label>
+            <input type="url" id="stockFormImg" class="form-input" placeholder="https://…" />
+            <p style="font-size:.72rem;color:var(--text3);margin-top:3px">Opsional — paste URL gambar part</p>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-outline" id="stockFormCancel">Batal</button>
+            <button type="submit" class="btn-primary" id="stockFormSubmit">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- ===== MODAL: Export Config ===== -->
+  <div class="modal-overlay" id="exportConfigOverlay" role="dialog" aria-modal="true" aria-labelledby="export-config-title">
+    <div class="modal" style="max-width:540px">
+      <button class="modal-close" id="exportConfigClose" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body">
+        <div class="export-config-header">
+          <div class="export-icon-wrap">
+            <i class="fa-brands fa-google"></i>
+          </div>
+          <div>
+            <h2 class="modal-title" id="export-config-title">Setup Export ke Google Sheets</h2>
+            <p class="modal-partno">Satu kali setup, selamanya bisa export</p>
+          </div>
+        </div>
+
+        <!-- Steps -->
+        <div class="export-steps">
+          <div class="export-step">
+            <span class="step-num">1</span>
+            <div class="step-body">
+              <p class="step-title">Buka Google Apps Script</p>
+              <p class="step-desc">Di spreadsheet Anda: <b>Extensions → Apps Script</b></p>
+              <a href="https://script.google.com/home" target="_blank" class="step-link">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Apps Script
+              </a>
+            </div>
+          </div>
+          <div class="export-step">
+            <span class="step-num">2</span>
+            <div class="step-body">
+              <p class="step-title">Paste kode dari file <code>apps-script-export.gs</code></p>
+              <p class="step-desc">Hapus kode yang ada, paste seluruh isi file tersebut</p>
+            </div>
+          </div>
+          <div class="export-step">
+            <span class="step-num">3</span>
+            <div class="step-body">
+              <p class="step-title">Deploy sebagai Web App</p>
+              <p class="step-desc"><b>Deploy → New Deployment → Web App</b><br>Execute as: <b>Me</b> · Who has access: <b>Anyone</b></p>
+            </div>
+          </div>
+          <div class="export-step">
+            <span class="step-num">4</span>
+            <div class="step-body">
+              <p class="step-title">Paste URL Web App di sini</p>
+              <input type="url" id="exportScriptUrl" class="form-input" placeholder="https://script.google.com/macros/s/..." />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-outline" id="exportConfigCancel">Batal</button>
+          <button type="button" class="btn-export" id="exportConfigSave">
+            <i class="fa-solid fa-floppy-disk"></i> Simpan & Export Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
